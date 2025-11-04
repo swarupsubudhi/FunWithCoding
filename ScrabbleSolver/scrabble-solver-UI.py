@@ -1,3 +1,4 @@
+# SCRABBLE Word Finder v0.1 #
 import tkinter as tk
 from tkinter import messagebox
 from collections import Counter
@@ -51,23 +52,19 @@ def scrabble_solver(letters, dictionary):
 
 # --- GUI Logic ---
 def run_solver():
-    try:
-        n = int(num_letters_entry.get().strip())
-    except ValueError:
-        messagebox.showerror("Error", "Please enter a valid number between 3 and 7.")
-        return
+    # Collect only non-empty letter entries
+    letters = [entry.get().strip().lower() for entry in letter_entries if entry.get().strip() != ""]
+    n = len(letters)
 
     if not (3 <= n <= 7):
-        messagebox.showerror("Error", "Number of letters must be between 3 and 7.")
+        messagebox.showerror("Error", "Please enter between 3 and 7 letters.")
         return
 
-    letters = []
-    for i in range(n):
-        ch = letter_entries[i].get().strip().lower()
+    # Validate each letter
+    for i, ch in enumerate(letters, start=1):
         if len(ch) != 1 or not ch.isalpha():
-            messagebox.showerror("Error", f"Letter {i+1} is invalid. Enter a single alphabetic character.")
+            messagebox.showerror("Error", f"Letter {i} is invalid. Enter a single alphabetic character.")
             return
-        letters.append(ch)
 
     letters = "".join(letters)
     results = scrabble_solver(letters, dictionary)
@@ -95,38 +92,6 @@ def run_solver():
         tk.Label(results_frame, text="No valid words found.", font=("Arial", 12),
                  bg="#ffffff", fg="red").pack()
 
-# --- Validation for number of letters ---
-def validate_number(P):
-    if P == "":
-        return True  # allow empty while typing
-    if P.isdigit():
-        val = int(P)
-        if 3 <= val <= 7:
-            return True
-    show_temp_popup("Enter a number from 3 to 7")
-    return False
-
-def show_temp_popup(message):
-    popup = tk.Toplevel(root)
-    popup.overrideredirect(True)
-    popup.configure(bg="yellow")
-    label = tk.Label(popup, text=message, bg="yellow", fg="black", font=("Arial", 10, "bold"))
-    label.pack(padx=10, pady=5)
-
-    # Position popup near the main window
-    x = root.winfo_x() + 100
-    y = root.winfo_y() + 100
-    popup.geometry(f"+{x}+{y}")
-
-    # Destroy popup after 1 second
-    popup.after(1000, popup.destroy)
-
-    # Also dismiss popup when user types again
-    def dismiss_on_type(event):
-        if popup.winfo_exists():
-            popup.destroy()
-    root.bind("<Key>", dismiss_on_type, add="+")
-
 # --- Validation for single letter ---
 def validate_letter(P):
     return (len(P) <= 1 and (P == "" or P.isalpha()))
@@ -145,15 +110,6 @@ header.pack(fill="x")
 # --- Input Frame ---
 input_frame = tk.Frame(root, bg="#f0f4f7")
 input_frame.pack(pady=10)
-
-row1 = tk.Frame(input_frame, bg="#f0f4f7")
-row1.pack(anchor="w", pady=5)
-tk.Label(row1, text="Enter the number of letters (3–7):", bg="#f0f4f7", font=("Arial", 12)).pack(side="left")
-
-vcmd_num = (root.register(validate_number), "%P")
-num_letters_entry = tk.Entry(row1, width=5, font=("Arial", 12), justify="center",
-                             validate="key", validatecommand=vcmd_num)
-num_letters_entry.pack(side="left", padx=5)
 
 tk.Label(input_frame, text="Enter the letters:", bg="#f0f4f7", font=("Arial", 12)).pack(anchor="w", pady=(10,2))
 
