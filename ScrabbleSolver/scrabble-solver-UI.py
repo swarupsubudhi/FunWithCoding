@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox, scrolledtext
+from tkinter import messagebox
 from collections import Counter
 import urllib.request
 
@@ -47,7 +47,6 @@ def scrabble_solver(letters, dictionary):
         if 3 <= len(word) <= len(letters) and can_form(word, letters_count):
             valid_words.append((word, word_score(word)))
 
-    # Sort by score (highest first), then length, then alphabetically
     return sorted(valid_words, key=lambda w: (-w[1], -len(w[0]), w[0]))
 
 # --- GUI Logic ---
@@ -73,37 +72,111 @@ def run_solver():
     letters = "".join(letters)
     results = scrabble_solver(letters, dictionary)
 
-    output_box.delete(1.0, tk.END)
+    # Clear previous results
+    for widget in results_frame.winfo_children():
+        widget.destroy()
+
     if results:
-        for word, score in results:
-            output_box.insert(tk.END, f"{word} ({score} points)\n")
+        half = (len(results) + 1) // 2
+        col1, col2 = results[:half], results[half:]
+
+        col1_frame = tk.Frame(results_frame, bg="#ffffff")
+        col1_frame.grid(row=0, column=0, sticky="n")
+        for word, score in col1:
+            tk.Label(col1_frame, text=f"{word} ({score})", font=("Courier New", 11),
+                     anchor="w", bg="#ffffff", fg="#333333").pack(anchor="w")
+
+        col2_frame = tk.Frame(results_frame, bg="#ffffff")
+        col2_frame.grid(row=0, column=1, sticky="n", padx=15)
+        for word, score in col2:
+            tk.Label(col2_frame, text=f"{word} ({score})", font=("Courier New", 11),
+                     anchor="w", bg="#ffffff", fg="#333333").pack(anchor="w")
     else:
-        output_box.insert(tk.END, "No valid words found.")
+        tk.Label(results_frame, text="No valid words found.", font=("Arial", 12),
+                 bg="#ffffff", fg="red").pack()
+
+# --- Validation for number of letters ---
+def validate_number(P):
+    if P == "":
+        return True  # allow empty while typing
+    if P.isdigit():
+        val = int(P)
+        if 3 <= val <= 7:
+            return True
+    show_temp_popup("Enter a number from 3 to 7")
+    return False
+
+def show_temp_popup(message):
+    popup = tk.Toplevel(root)
+    popup.overrideredirect(True)
+    popup.configure(bg="yellow")
+    label = tk.Label(popup, text=message, bg="yellow", fg="black", font=("Arial", 10, "bold"))
+    label.pack(padx=10, pady=5)
+
+    # Position popup near the main window
+    x = root.winfo_x() + 100
+    y = root.winfo_y() + 100
+    popup.geometry(f"+{x}+{y}")
+
+    # Destroy popup after 1 second
+    popup.after(1000, popup.destroy)
+
+    # Also dismiss popup when user types again
+    def dismiss_on_type(event):
+        if popup.winfo_exists():
+            popup.destroy()
+    root.bind("<Key>", dismiss_on_type, add="+")
+
+# --- Validation for single letter ---
+def validate_letter(P):
+    return (len(P) <= 1 and (P == "" or P.isalpha()))
 
 # --- Main Window ---
 root = tk.Tk()
-root.title("Scrabble Solver with Scoring")
+root.title("🎲 Scrabble Solver")
+root.geometry("400x600")
+root.configure(bg="#f0f4f7")
 
-# Number of letters
-tk.Label(root, text="Number of letters (3–7):").grid(row=0, column=0, sticky="w")
-num_letters_entry = tk.Entry(root, width=5)
-num_letters_entry.grid(row=0, column=1, sticky="w")
+# --- Header ---
+header = tk.Label(root, text="Scrabble Solver", font=("Helvetica", 18, "bold"),
+                  bg="#4a90e2", fg="white", pady=8)
+header.pack(fill="x")
 
-# Letter entries
+# --- Input Frame ---
+input_frame = tk.Frame(root, bg="#f0f4f7")
+input_frame.pack(pady=10)
+
+row1 = tk.Frame(input_frame, bg="#f0f4f7")
+row1.pack(anchor="w", pady=5)
+tk.Label(row1, text="Enter the number of letters (3–7):", bg="#f0f4f7", font=("Arial", 12)).pack(side="left")
+
+vcmd_num = (root.register(validate_number), "%P")
+num_letters_entry = tk.Entry(row1, width=5, font=("Arial", 12), justify="center",
+                             validate="key", validatecommand=vcmd_num)
+num_letters_entry.pack(side="left", padx=5)
+
+tk.Label(input_frame, text="Enter the letters:", bg="#f0f4f7", font=("Arial", 12)).pack(anchor="w", pady=(10,2))
+
+letters_frame = tk.Frame(input_frame, bg="#f0f4f7")
+letters_frame.pack()
+
+vcmd_letter = (root.register(validate_letter), "%P")
 letter_entries = []
 for i in range(7):
-    tk.Label(root, text=f"Letter {i+1}:").grid(row=i+1, column=0, sticky="w")
-    entry = tk.Entry(root, width=5)
-    entry.grid(row=i+1, column=1, sticky="w")
+    entry = tk.Entry(letters_frame, width=3, font=("Arial", 14), justify="center",
+                     validate="key", validatecommand=vcmd_letter)
+    entry.grid(row=0, column=i, padx=4)
     letter_entries.append(entry)
 
-# Run button
-run_button = tk.Button(root, text="Find Words", command=run_solver)
-run_button.grid(row=8, column=0, columnspan=2, pady=10)
+# --- Button ---
+run_button = tk.Button(root, text="Find Words", command=run_solver,
+                       bg="#4a90e2", fg="white", font=("Arial", 13, "bold"),
+                       activebackground="#357ABD", activeforeground="white")
+run_button.pack(pady=10)
 
-# Output box
-output_box = scrolledtext.ScrolledText(root, width=50, height=20)
-output_box.grid(row=9, column=0, columnspan=2, pady=10)
+# --- Results Frame ---
+results_frame = tk.Frame(root, bg="#ffffff")
+results_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
 # Load dictionary once at startup
 dictionary = load_dictionary(source="github")
