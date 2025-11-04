@@ -3,6 +3,20 @@ from tkinter import messagebox, scrolledtext
 from collections import Counter
 import urllib.request
 
+# --- Scrabble scoring ---
+SCRABBLE_SCORES = {
+    **{ch: 1 for ch in "AEILNORSTU"},
+    **{ch: 2 for ch in "DG"},
+    **{ch: 3 for ch in "BCMP"},
+    **{ch: 4 for ch in "FHVWY"},
+    **{ch: 5 for ch in "K"},
+    **{ch: 8 for ch in "JX"},
+    **{ch: 10 for ch in "QZ"},
+}
+
+def word_score(word):
+    return sum(SCRABBLE_SCORES.get(ch.upper(), 0) for ch in word)
+
 # --- Dictionary Loader ---
 def load_dictionary(source="github", file_path="words_alpha.txt"):
     if source == "local":
@@ -31,9 +45,10 @@ def scrabble_solver(letters, dictionary):
 
     for word in dictionary:
         if 3 <= len(word) <= len(letters) and can_form(word, letters_count):
-            valid_words.append(word)
+            valid_words.append((word, word_score(word)))
 
-    return sorted(valid_words, key=lambda w: (-len(w), w))
+    # Sort by score (highest first), then length, then alphabetically
+    return sorted(valid_words, key=lambda w: (-w[1], -len(w[0]), w[0]))
 
 # --- GUI Logic ---
 def run_solver():
@@ -60,13 +75,14 @@ def run_solver():
 
     output_box.delete(1.0, tk.END)
     if results:
-        output_box.insert(tk.END, "\n".join(results))
+        for word, score in results:
+            output_box.insert(tk.END, f"{word} ({score} points)\n")
     else:
         output_box.insert(tk.END, "No valid words found.")
 
 # --- Main Window ---
 root = tk.Tk()
-root.title("Scrabble Solver")
+root.title("Scrabble Solver with Scoring")
 
 # Number of letters
 tk.Label(root, text="Number of letters (3–7):").grid(row=0, column=0, sticky="w")
@@ -86,7 +102,7 @@ run_button = tk.Button(root, text="Find Words", command=run_solver)
 run_button.grid(row=8, column=0, columnspan=2, pady=10)
 
 # Output box
-output_box = scrolledtext.ScrolledText(root, width=40, height=15)
+output_box = scrolledtext.ScrolledText(root, width=50, height=20)
 output_box.grid(row=9, column=0, columnspan=2, pady=10)
 
 # Load dictionary once at startup
